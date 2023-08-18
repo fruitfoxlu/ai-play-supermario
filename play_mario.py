@@ -16,6 +16,7 @@ agent = DQNAgent(state_size, action_size)  # You might need to modify DQNAgent t
 
 # Training loop
 episodes = 1000
+batch_size = 32
 for e in range(episodes):
     state = env.reset()
     state = np.stack([state] * 4, axis=2)  # Stack 4 frames

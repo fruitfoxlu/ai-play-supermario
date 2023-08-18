@@ -40,7 +40,8 @@ class DQNAgent:
         return np.argmax(act_values[0])
 
     def replay(self, batch_size):
-        minibatch = np.random.choice(self.memory, batch_size)
+        minibatch_indices = np.random.choice(len(self.memory), batch_size, replace=False)
+        minibatch = [self.memory[index] for index in minibatch_indices] 
         for state, action, reward, next_state, done in minibatch:
             target = reward
             if not done:
