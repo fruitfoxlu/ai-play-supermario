@@ -13,6 +13,8 @@ class DQNAgent:
         self.epsilon_decay = 0.995
         self.learning_rate = 0.001
         self.model = self._build_model()
+        self.new_lesson()  # Initialize to an invalid value
+
 
     def _build_model(self):
         model = tf.keras.models.Sequential()
@@ -30,25 +32,45 @@ class DQNAgent:
         model.compile(loss='mse', optimizer=tf.keras.optimizers.Adam(lr=self.learning_rate))
         return model
 
-    def remember(self, state, action, reward, next_state, done):
-        self.memory.append((state, action, reward, next_state, done))
+    def new_lesson(self):
+        self.prev_x_position = -1  # Initialize to an invalid value
+
+    def remember(self, state, action, info,reward, next_state, done):
+        shapped_reward = self.reward_shaping(info,reward)
+        self.memory.append((state, action, shapped_reward, next_state, done))
 
     def act(self, state):
         if np.random.rand() <= self.epsilon:
             return np.random.randint(self.action_size)
+        if state.shape[1:] != (240, 256, 4):
+            print(f"act : Skipped prediction due to shape mismatch: {state.shape}")
+            return 0
         act_values = self.model.predict(state)
         return np.argmax(act_values[0])
+
+    def reward_shaping(self,info,reward):
+        # If Mario's x position hasn't changed, modify the reward
+        # if self.prev_x_position <= info['x_pos']:
+        #     print("Penalize for not moving forward")
+        #     reward += 0.1  # Penalize for not moving forward
+        return reward
 
     def replay(self, batch_size):
         minibatch_indices = np.random.choice(len(self.memory), batch_size, replace=False)
         minibatch = [self.memory[index] for index in minibatch_indices] 
         for state, action, reward, next_state, done in minibatch:
+            if (next_state.shape[1:] != (240, 256, 4) or state.shape[1:] != (240, 256, 4)):
+                print(f"replay : Skipped prediction due to shape mismatch: {next_state.shape}")
+                continue 
             target = reward
-            if not done:
+            # Check the shape of next_state
+            if not done :
                 target = (reward + self.gamma * np.amax(self.model.predict(next_state)[0]))
+            
             target_f = self.model.predict(state)
             target_f[0][action] = target
             self.model.train_on_batch(state, target_f)
+
         if self.epsilon > self.epsilon_min:
             self.epsilon *= self.epsilon_decay
 

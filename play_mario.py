@@ -2,12 +2,42 @@ import numpy as np
 import tensorflow as tf
 from nes_py.wrappers import JoypadSpace
 import gym_super_mario_bros
-from gym_super_mario_bros.actions import SIMPLE_MOVEMENT
-from dqnagent import DQNAgent  # Assuming you have the DQNAgent class from the previous example
+from gym_super_mario_bros.actions import SIMPLE_MOVEMENT,COMPLEX_MOVEMENT
+from dqnagent import DQNAgent  
+
+# actions for very simple movement
+MY_SIMPLE_MOVEMENT = [
+    ['NOOP'],
+    ['right'],
+    ['right', 'A'],
+    ['right', 'B'],
+    ['right', 'A', 'B'],
+    ['A'],
+    ['A','A'],
+    ['A','A','A'],
+    ['A','right', 'A'],
+    ['left']
+]
+
+# actions for more complex movement
+MY_COMPLEX_MOVEMENT = [
+    ['NOOP'],
+    ['right'],
+    ['right', 'A'],
+    ['right', 'B'],
+    ['right', 'A', 'B'],
+    ['A'],
+    ['left'],
+    ['left', 'A'],
+    ['left', 'B'],
+    ['left', 'A', 'B'],
+    ['down'],
+    ['up'],
+]
 
 # Create the Super Mario environment
 env = gym_super_mario_bros.make('SuperMarioBros-v0')
-env = JoypadSpace(env, SIMPLE_MOVEMENT)  # Use SIMPLE_MOVEMENT to reduce action space
+env = JoypadSpace(env, MY_SIMPLE_MOVEMENT)  # Use SIMPLE_MOVEMENT to reduce action space
 
 # Create the DQN agent
 state_size = (240, 256, 4)  # 4 stacked frames of 240x256 pixels
@@ -22,17 +52,19 @@ for e in range(episodes):
     state = np.stack([state] * 4, axis=2)  # Stack 4 frames
     total_reward = 0
     done = False
+
+    
     while not done:
         env.render() # This will display the game screen
         action = agent.act(state)
         next_state, reward, done, info = env.step(action)
-        #next_state, reward, terminated, truncated, info = env.step(action)
         next_state = np.stack([next_state] * 4, axis=2)
-        agent.remember(state, action, reward, next_state, done)
+        agent.remember(state, action, info,reward, next_state, done)
+        
         state = next_state
         total_reward += reward
         if done:
             print(f"Episode: {e}/{episodes}, Score: {total_reward}")
             break
     if len(agent.memory) > batch_size:
-        agent.replay(batch_size)
+        agent.replay(batch_size) #update the NN by so far what we learn
